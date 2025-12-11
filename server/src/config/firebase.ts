@@ -38,4 +38,4 @@ try {
 }
 
 export { firebaseApp };
-export const messaging = firebaseApp ? admin.messaging() : null;
+export const messaging: admin.messaging.Messaging | null = firebaseApp ? admin.messaging() : null;

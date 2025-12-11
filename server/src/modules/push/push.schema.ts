@@ -18,8 +18,8 @@ export const subscribePushSchema = z.object({
 export const sendNotificationSchema = z.object({
     title: z.string().min(1, 'title es requerido').max(100, 'title no puede exceder 100 caracteres'),
     body: z.string().min(1, 'body es requerido').max(500, 'body no puede exceder 500 caracteres'),
-    userIds: z.array(z.string().cuid('Cada userId debe ser un ID válido')).optional(),
-    data: z.record(z.any()).optional()
+    userIds: z.array(z.string().min(1)).optional(),
+    data: z.record(z.string(), z.any()).optional()
 });
 
 export type SubscribePushInput = z.infer<typeof subscribePushSchema>;

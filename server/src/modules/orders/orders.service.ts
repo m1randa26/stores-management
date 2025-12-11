@@ -1,6 +1,5 @@
 import { prisma } from '../../config/prisma.js';
 import { CreateOrderInput, SyncOrderInput, OrderItemInput } from './orders.schema.js';
-import { Decimal } from '@prisma/client/runtime/library';
 import { sendFcmNotification } from '../fcm/fcm.service.js';
 
 type OrderStatus = 'PENDING' | 'SYNCED' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED';
