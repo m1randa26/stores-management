@@ -44,9 +44,9 @@ function StoreQRScanView() {
 
     const fetchStore = async () => {
       try {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8081'
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8081/api'
         const token = tokenStorage.getToken()
-        const response = await fetch(`${API_URL}/api/stores/qr/${qrCode}`, {
+        const response = await fetch(`${API_URL}/stores/qr/${qrCode}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
