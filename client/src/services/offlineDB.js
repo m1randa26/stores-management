@@ -1,5 +1,5 @@
 const DB_NAME = 'abarrotesDB'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 const STORES = {
   PENDING_VISITS: 'pendingVisits',
@@ -7,7 +7,8 @@ const STORES = {
   PENDING_PHOTOS: 'pendingPhotos',
   OFFLINE_MAPPING: 'offlineMapping',
   CACHED_PRODUCTS: 'cachedProducts',
-  CACHED_STORES: 'cachedStores'
+  CACHED_STORES: 'cachedStores',
+  ASSIGNED_STORES: 'assignedStores'
 }
 
 // Abrir/crear base de datos
@@ -59,6 +60,12 @@ const openDB = () => {
       // Store de tiendas en caché
       if (!db.objectStoreNames.contains(STORES.CACHED_STORES)) {
         db.createObjectStore(STORES.CACHED_STORES, { keyPath: 'id' })
+      }
+
+      // Store de tiendas asignadas (para escaneo QR offline)
+      if (!db.objectStoreNames.contains(STORES.ASSIGNED_STORES)) {
+        const assignedStore = db.createObjectStore(STORES.ASSIGNED_STORES, { keyPath: 'id' })
+        assignedStore.createIndex('qrCode', 'qrCode', { unique: true })
       }
 
       console.log('📦 IndexedDB inicializada correctamente')
