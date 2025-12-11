@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
 
 function QRScannerModal({ isOpen, onClose, onScan }) {
@@ -8,41 +8,97 @@ function QRScannerModal({ isOpen, onClose, onScan }) {
   const html5QrCodeRef = useRef(null)
   const scannerContainerId = 'qr-reader-container'
 
-  useEffect(() => {
-    if (isOpen) {
-      // Pequeño delay para asegurar que el DOM está listo
-      const timer = setTimeout(() => {
-        startScanner()
-      }, 100)
-      return () => clearTimeout(timer)
+  const getErrorMessage = useCallback((err) => {
+    const errorName = err?.name || ''
+    const errorMessage = err?.message || ''
+
+    if (errorName === 'NotAllowedError' || errorMessage.includes('Permission denied')) {
+      return 'Permiso de cámara denegado. Por favor, permite el acceso a la cámara en la configuración de tu navegador.'
+    }
+    if (errorName === 'NotFoundError' || errorMessage.includes('Requested device not found')) {
+      return 'No se encontró ninguna cámara en el dispositivo.'
+    }
+    if (errorName === 'NotReadableError' || errorMessage.includes('Could not start video source')) {
+      return 'La cámara está siendo usada por otra aplicación.'
+    }
+    if (errorMessage.includes('SSL') || errorMessage.includes('https')) {
+      return 'El escáner QR requiere una conexión segura (HTTPS).'
+    }
+    return 'Error al acceder a la cámara. Intenta de nuevo.'
+  }, [])
+
+  const extractQRCode = useCallback((text) => {
+    if (text.includes('/stores/scan/')) {
+      const parts = text.split('/stores/scan/')
+      const code = parts[1]?.split('?')[0]?.split('/')[0]
+      return code || null
+    }
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (uuidRegex.test(text)) {
+      return text
+    }
+    return null
+  }, [])
+
+  const stopScanner = useCallback(async () => {
+    if (html5QrCodeRef.current) {
+      try {
+        const state = html5QrCodeRef.current.getState()
+        if (state === 2) {
+          await html5QrCodeRef.current.stop()
+        }
+        html5QrCodeRef.current.clear()
+      } catch (err) {
+        console.warn('Error al detener escáner:', err)
+      }
+      html5QrCodeRef.current = null
+    }
+    setIsScanning(false)
+  }, [])
+
+  const handleScanSuccess = useCallback(async (decodedText) => {
+    console.log('📷 QR detectado:', decodedText)
+
+    if (navigator.vibrate) {
+      navigator.vibrate(200)
+    }
+
+    await stopScanner()
+
+    const qrCode = extractQRCode(decodedText)
+
+    if (qrCode) {
+      console.log('✅ Código QR extraído:', qrCode)
+      onScan(qrCode)
     } else {
-      stopScanner()
+      setError('Código QR no válido para esta aplicación')
     }
+  }, [stopScanner, extractQRCode, onScan])
 
-    return () => {
-      stopScanner()
+  const handleScanError = useCallback((errorMessage) => {
+    if (!errorMessage.includes('No QR code found') && 
+        !errorMessage.includes('NotFoundException')) {
+      console.warn('Error de escaneo:', errorMessage)
     }
-  }, [isOpen])
+  }, [])
 
-  const startScanner = async () => {
+  const startScanner = useCallback(async () => {
     try {
       setError('')
       setIsScanning(false)
       setHasPermission(null)
 
-      // Verificar si el contenedor existe
       const container = document.getElementById(scannerContainerId)
       if (!container) {
         console.error('Container no encontrado')
         return
       }
 
-      // Limpiar instancia anterior si existe
       if (html5QrCodeRef.current) {
         try {
           await html5QrCodeRef.current.stop()
-        } catch (e) {
-          // Ignorar error si no estaba corriendo
+        } catch {
+          // Ignorar
         }
         html5QrCodeRef.current = null
       }
@@ -71,95 +127,19 @@ function QRScannerModal({ isOpen, onClose, onScan }) {
       setError(getErrorMessage(err))
       setIsScanning(false)
     }
-  }
+  }, [handleScanSuccess, handleScanError, getErrorMessage])
 
-  const stopScanner = async () => {
-    if (html5QrCodeRef.current) {
-      try {
-        const state = html5QrCodeRef.current.getState()
-        if (state === 2) { // SCANNING
-          await html5QrCodeRef.current.stop()
-        }
-        html5QrCodeRef.current.clear()
-      } catch (err) {
-        console.warn('Error al detener escáner:', err)
-      }
-      html5QrCodeRef.current = null
-    }
-    setIsScanning(false)
-  }
-
-  const handleScanSuccess = async (decodedText) => {
-    console.log('📷 QR detectado:', decodedText)
-
-    // Vibrar si está disponible
-    if (navigator.vibrate) {
-      navigator.vibrate(200)
-    }
-
-    // Detener escáner antes de procesar
-    await stopScanner()
-
-    // Extraer el código QR del URL escaneado
-    const qrCode = extractQRCode(decodedText)
-
-    if (qrCode) {
-      console.log('✅ Código QR extraído:', qrCode)
-      onScan(qrCode)
-    } else {
-      setError('Código QR no válido para esta aplicación')
-      // Reiniciar escáner después de error
-      setTimeout(() => {
-        setError('')
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => {
         startScanner()
-      }, 2000)
+      }, 100)
+      return () => clearTimeout(timer)
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      stopScanner()
     }
-  }
-
-  const handleScanError = (errorMessage) => {
-    // Ignorar errores normales de "no QR found"
-    if (!errorMessage.includes('No QR code found') && 
-        !errorMessage.includes('NotFoundException')) {
-      console.warn('Error de escaneo:', errorMessage)
-    }
-  }
-
-  const extractQRCode = (text) => {
-    // Si es un URL completo, extraer el UUID
-    // Formato esperado: https://domain.com/stores/scan/{qrCode}
-    if (text.includes('/stores/scan/')) {
-      const parts = text.split('/stores/scan/')
-      const code = parts[1]?.split('?')[0]?.split('/')[0]
-      return code || null
-    }
-
-    // Si ya es solo el código UUID
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (uuidRegex.test(text)) {
-      return text
-    }
-
-    return null
-  }
-
-  const getErrorMessage = (err) => {
-    const errorName = err?.name || ''
-    const errorMessage = err?.message || ''
-
-    if (errorName === 'NotAllowedError' || errorMessage.includes('Permission denied')) {
-      return 'Permiso de cámara denegado. Por favor, permite el acceso a la cámara en la configuración de tu navegador.'
-    }
-    if (errorName === 'NotFoundError' || errorMessage.includes('Requested device not found')) {
-      return 'No se encontró ninguna cámara en el dispositivo.'
-    }
-    if (errorName === 'NotReadableError' || errorMessage.includes('Could not start video source')) {
-      return 'La cámara está siendo usada por otra aplicación.'
-    }
-    if (errorMessage.includes('SSL') || errorMessage.includes('https')) {
-      return 'El escáner QR requiere una conexión segura (HTTPS).'
-    }
-    return 'Error al acceder a la cámara. Intenta de nuevo.'
-  }
+  }, [isOpen, startScanner, stopScanner])
 
   const handleClose = async () => {
     await stopScanner()
@@ -202,37 +182,30 @@ function QRScannerModal({ isOpen, onClose, onScan }) {
         {/* Scanner Area */}
         <div className="p-4">
           <div className="relative">
-            {/* Contenedor del escáner */}
             <div
               id={scannerContainerId}
               className="w-full aspect-square bg-gray-900 rounded-xl overflow-hidden"
             />
 
-            {/* Overlay con marco de escaneo */}
             {isScanning && (
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                 <div className="w-64 h-64 border-2 border-white/50 rounded-lg relative">
-                  {/* Esquinas animadas */}
                   <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-green-400 rounded-tl-lg" />
                   <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-green-400 rounded-tr-lg" />
                   <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-green-400 rounded-bl-lg" />
                   <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-green-400 rounded-br-lg" />
-
-                  {/* Línea de escaneo animada */}
                   <div className="absolute inset-x-4 h-0.5 bg-green-400 animate-pulse top-1/2" />
                 </div>
               </div>
             )}
           </div>
 
-          {/* Instrucciones */}
           {isScanning && (
             <p className="text-center text-gray-600 mt-4 text-sm">
               Apunta la cámara al código QR de la tienda
             </p>
           )}
 
-          {/* Loading */}
           {!isScanning && !error && hasPermission === null && (
             <div className="mt-4 flex flex-col items-center justify-center gap-3 py-4">
               <svg className="animate-spin w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24">
@@ -243,7 +216,6 @@ function QRScannerModal({ isOpen, onClose, onScan }) {
             </div>
           )}
 
-          {/* Error */}
           {error && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
               <div className="flex items-start gap-3">

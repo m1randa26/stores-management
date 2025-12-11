@@ -65,11 +65,13 @@ function PhotoUploadModal({ isOpen, onClose, visita, tienda, onSuccess, existing
     } else {
       console.log('PhotoUploadModal abierto. Fotos existentes:', safeExistingPhotos.length)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, visita]) 
 
   // Cleanup: Detener cámara al desmontar
   useEffect(() => {
     return () => stopCamera()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Conectar stream al video
@@ -110,6 +112,7 @@ function PhotoUploadModal({ isOpen, onClose, visita, tienda, onSuccess, existing
         if (preview.url.startsWith('blob:')) URL.revokeObjectURL(preview.url)
       })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFiles])
 
   // --- MANEJO DE SELECCIÓN DE ARCHIVOS ---

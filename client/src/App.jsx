@@ -56,7 +56,7 @@ function App() {
     return () => {
       syncService.stopAutoSync()
     }
-  }, [])
+  }, [user])
 
   // Función para determinar la ruta por defecto
   const getDefaultRoute = () => {

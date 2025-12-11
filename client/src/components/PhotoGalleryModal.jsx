@@ -15,6 +15,7 @@ function PhotoGalleryModal({ isOpen, onClose, visita, tienda }) {
     if (isOpen && visita) {
       loadPhotos()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, visita])
 
   // Reset states when modal closes
@@ -40,41 +41,6 @@ function PhotoGalleryModal({ isOpen, onClose, visita, tienda }) {
       console.error('Error al cargar fotos:', err)
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const handleDeletePhoto = async (photoId) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta foto?')) {
-      return
-    }
-
-    setDeletingPhotoId(photoId)
-
-    try {
-      await photoService.deletePhoto(photoId)
-
-      // Remover foto de la lista local
-      setPhotos(photos.filter((photo) => photo.id !== photoId))
-
-      // Si la foto eliminada estaba seleccionada, cerrar vista detallada
-      if (selectedPhoto && selectedPhoto.id === photoId) {
-        setSelectedPhoto(null)
-      }
-
-      setToast({
-        show: true,
-        message: 'Foto eliminada exitosamente',
-        type: 'success',
-      })
-    } catch (err) {
-      setToast({
-        show: true,
-        message: err.message,
-        type: 'error',
-      })
-      console.error('Error al eliminar foto:', err)
-    } finally {
-      setDeletingPhotoId(null)
     }
   }
 

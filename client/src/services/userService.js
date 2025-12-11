@@ -49,8 +49,8 @@ export const userService = {
         data: repartidores,
         total: repartidores.length
       }
-    } catch (error) {
-      throw error
+    } finally {
+      // Cleanup if needed
     }
   },
 

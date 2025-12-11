@@ -120,7 +120,7 @@ function RepartidorDashboard() {
         } else {
           setErrorTiendas(error.message)
         }
-      } catch (cacheError) {
+      } catch {
         setErrorTiendas(error.message)
       }
     } finally {
@@ -162,6 +162,7 @@ function RepartidorDashboard() {
       fetchVisitas()
       fetchOrdenes()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   const handleLogout = () => {
