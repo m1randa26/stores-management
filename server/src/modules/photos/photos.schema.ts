@@ -12,15 +12,15 @@ export const uploadPhotoSchema = z.object({
 
 /**
  * Schema para sincronizar foto offline
- * - offlineId: CUID generado en modo offline
- * - visitId: CUID de la visita
- * - filename: Nombre del archivo
+ * - offlineId: ID generado en modo offline (UUID o CUID)
+ * - visitId: CUID de la visita del servidor
+ * - filename: Nombre del archivo (opcional, se toma del archivo si no se envía)
  * - description (opcional): Descripción de la foto
  */
 export const syncOfflinePhotoSchema = z.object({
-    offlineId: z.string().trim().min(1, 'offlineId es requerido').cuid('offlineId debe ser un ID válido'),
+    offlineId: z.string().trim().min(1, 'offlineId es requerido').uuid('offlineId debe ser un UUID válido'),
     visitId: z.string().trim().min(1, 'visitId es requerido').cuid('visitId debe ser un ID válido'),
-    filename: z.string().trim().min(1, 'El nombre del archivo es requerido'),
+    filename: z.string().trim().min(1, 'El nombre del archivo es requerido').optional(),
     description: z.string().max(500, 'La descripción no puede exceder 500 caracteres').optional().or(z.literal(''))
 });
 
