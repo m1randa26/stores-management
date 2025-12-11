@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8081/api'
+
 function StoreQRView() {
   const { qrCode } = useParams()
   const [store, setStore] = useState(null)
@@ -10,7 +12,7 @@ function StoreQRView() {
   useEffect(() => {
     const fetchStore = async () => {
       try {
-        const response = await fetch(`http://localhost:8081/api/stores/qr/${qrCode}`)
+        const response = await fetch(`${API_URL}/stores/qr/${qrCode}`)
         const data = await response.json()
         
         if (data.success) {
