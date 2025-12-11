@@ -46,7 +46,7 @@ function RepartidorDashboard() {
       if (fcmToken) {
         try {
           const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8081'
-          const response = await fetch(`${API_URL}/api/fcm/token`, {
+          const response = await fetch(`${API_URL}/fcm/token`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
