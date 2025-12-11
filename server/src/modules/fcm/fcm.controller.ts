@@ -17,10 +17,20 @@ import { ZodError } from 'zod';
  */
 export const saveToken = async (req: Request, res: Response) => {
     try {
+        console.log('\n🔔 [FCM] ====== GUARDAR TOKEN FCM ======');
+        console.log('[FCM] Body recibido:', JSON.stringify(req.body, null, 2));
+        console.log('[FCM] Usuario ID:', req.user?.userId);
+        
         const validatedData = saveFcmTokenSchema.parse(req.body);
         const userId = req.user?.userId as string;
 
+        console.log('[FCM] Token a guardar:', validatedData.token?.substring(0, 30) + '...');
+        console.log('[FCM] Device info:', validatedData.deviceInfo);
+
         const result = await saveFcmToken(userId, validatedData);
+
+        console.log('[FCM] ✅ Token guardado exitosamente');
+        console.log('[FCM] ================================\n');
 
         res.status(201).json({
             success: true,
@@ -147,9 +157,21 @@ export const deleteAllTokens = async (req: Request, res: Response) => {
  */
 export const sendNotification = async (req: Request, res: Response) => {
     try {
+        console.log('\n🔔 [FCM] ====== ENVIAR NOTIFICACIÓN ======');
+        console.log('[FCM] Body recibido:', JSON.stringify(req.body, null, 2));
+        console.log('[FCM] Usuario que envía:', req.user?.userId);
+        
         const validatedData = sendFcmNotificationSchema.parse(req.body);
 
+        console.log('[FCM] Título:', validatedData.title);
+        console.log('[FCM] Body:', validatedData.body);
+        console.log('[FCM] UserIds destino:', validatedData.userIds);
+        console.log('[FCM] Data adicional:', validatedData.data);
+
         const result = await sendFcmNotification(validatedData);
+
+        console.log('[FCM] Resultado:', JSON.stringify(result, null, 2));
+        console.log('[FCM] ================================\n');
 
         res.json({
             success: true,

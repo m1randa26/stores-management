@@ -115,9 +115,13 @@ export const deleteAllUserTokens = async (userId: string) => {
  * Enviar notificación FCM
  */
 export const sendFcmNotification = async (data: SendFcmNotificationInput) => {
+    console.log('\n📤 [FCM-SERVICE] Iniciando envío de notificación...');
+    console.log('[FCM-SERVICE] Datos recibidos:', JSON.stringify(data, null, 2));
+    
     // Verificar si Firebase está disponible
     if (!messaging) {
-        console.warn('⚠️ Firebase no está configurado. Notificación no enviada.');
+        console.error('❌ [FCM-SERVICE] Firebase messaging NO está disponible!');
+        console.error('[FCM-SERVICE] Verifica que FIREBASE_SERVICE_ACCOUNT esté configurado correctamente');
         return {
             success: 0,
             failure: 0,
@@ -125,11 +129,16 @@ export const sendFcmNotification = async (data: SendFcmNotificationInput) => {
             message: 'Firebase no está configurado'
         };
     }
+    
+    console.log('✅ [FCM-SERVICE] Firebase messaging está disponible');
 
     // Obtener tokens de los usuarios destino
     const where: any = {};
     if (data.userIds && data.userIds.length > 0) {
         where.userId = { in: data.userIds };
+        console.log('[FCM-SERVICE] Buscando tokens para userIds:', data.userIds);
+    } else {
+        console.log('[FCM-SERVICE] Buscando TODOS los tokens (broadcast)');
     }
 
     const fcmTokens = await prisma.fcmToken.findMany({
@@ -145,7 +154,14 @@ export const sendFcmNotification = async (data: SendFcmNotificationInput) => {
         }
     });
 
+    console.log(`[FCM-SERVICE] Tokens encontrados: ${fcmTokens.length}`);
+    fcmTokens.forEach((t, i) => {
+        console.log(`[FCM-SERVICE]   ${i + 1}. Usuario: ${t.user.name} (${t.user.email})`);
+        console.log(`[FCM-SERVICE]      Token: ${t.token.substring(0, 40)}...`);
+    });
+
     if (fcmTokens.length === 0) {
+        console.warn('[FCM-SERVICE] ⚠️ No se encontraron tokens para los usuarios especificados');
         return {
             success: 0,
             failure: 0,
@@ -154,7 +170,7 @@ export const sendFcmNotification = async (data: SendFcmNotificationInput) => {
         };
     }
 
-    console.log(`📤 Enviando notificación FCM a ${fcmTokens.length} dispositivo(s)...`);
+    console.log(`📤 [FCM-SERVICE] Enviando notificación a ${fcmTokens.length} dispositivo(s)...`);
 
     let successCount = 0;
     let failureCount = 0;
@@ -178,15 +194,20 @@ export const sendFcmNotification = async (data: SendFcmNotificationInput) => {
         try {
             message.token = fcmToken.token;
             
-            console.log(`📨 Enviando a ${fcmToken.user.name} (${fcmToken.user.email})...`);
+            console.log(`\n📨 [FCM-SERVICE] Enviando a ${fcmToken.user.name} (${fcmToken.user.email})...`);
+            console.log(`[FCM-SERVICE] Token completo: ${fcmToken.token}`);
+            console.log(`[FCM-SERVICE] Mensaje a enviar:`, JSON.stringify(message, null, 2));
             
             const response = await messaging.send(message);
-            console.log(`✅ Notificación enviada exitosamente:`, response);
+            console.log(`✅ [FCM-SERVICE] Notificación enviada exitosamente!`);
+            console.log(`[FCM-SERVICE] Response de Firebase:`, response);
             successCount++;
         } catch (error: any) {
             failureCount++;
-            console.error(`❌ Error al enviar notificación a ${fcmToken.user.email}:`);
-            console.error(`   Error:`, error.message);
+            console.error(`\n❌ [FCM-SERVICE] Error al enviar a ${fcmToken.user.email}:`);
+            console.error(`[FCM-SERVICE] Error code:`, error.code);
+            console.error(`[FCM-SERVICE] Error message:`, error.message);
+            console.error(`[FCM-SERVICE] Error completo:`, JSON.stringify(error, null, 2));
 
             // Si el token es inválido, eliminarlo
             if (
