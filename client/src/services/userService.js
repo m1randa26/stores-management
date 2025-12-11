@@ -1,6 +1,5 @@
 import { tokenStorage } from '../utils/tokenStorage'
-
-const API_URL = 'http://localhost:8081/api'
+import { API_URL } from '../config/api'
 
 export const userService = {
   getUsers: async () => {

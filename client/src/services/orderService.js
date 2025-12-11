@@ -2,8 +2,7 @@ import { tokenStorage } from '../utils/tokenStorage'
 import offlineDB from './offlineDB'
 import networkService from './networkService'
 import { v4 as uuidv4 } from 'uuid'
-
-const API_URL = 'http://localhost:8081/api'
+import { API_URL } from '../config/api'
 
 export const orderService = {
   // Crear nueva orden (con soporte offline)

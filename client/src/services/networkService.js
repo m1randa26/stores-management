@@ -1,3 +1,5 @@
+import { API_URL } from '../config/api'
+
 class NetworkService {
   constructor() {
     this.isOnline = navigator.onLine
@@ -46,7 +48,7 @@ class NetworkService {
   }
 
   // Verificar conectividad haciendo una petición al servidor
-  async checkConnectivity(apiUrl = 'http://localhost:8081/api') {
+  async checkConnectivity(apiUrl = API_URL) {
     try {
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 5000)
