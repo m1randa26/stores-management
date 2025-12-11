@@ -115,6 +115,17 @@ export const deleteAllUserTokens = async (userId: string) => {
  * Enviar notificación FCM
  */
 export const sendFcmNotification = async (data: SendFcmNotificationInput) => {
+    // Verificar si Firebase está disponible
+    if (!messaging) {
+        console.warn('⚠️ Firebase no está configurado. Notificación no enviada.');
+        return {
+            success: 0,
+            failure: 0,
+            removed: 0,
+            message: 'Firebase no está configurado'
+        };
+    }
+
     // Obtener tokens de los usuarios destino
     const where: any = {};
     if (data.userIds && data.userIds.length > 0) {
