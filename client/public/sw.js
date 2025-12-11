@@ -1,4 +1,5 @@
 /* eslint-env serviceworker */
+/* global importScripts, firebase */
 // Importar Firebase Cloud Messaging (compat para Service Workers)
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');

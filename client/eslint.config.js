@@ -24,6 +24,8 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Allow setState in effects for data fetching and modal reset patterns
+      'react-hooks/set-state-in-effect': 'warn',
     },
   },
 ])

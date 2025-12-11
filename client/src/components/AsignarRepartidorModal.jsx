@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { storeService } from '../services/storeService'
 import Toast from './Toast'
 
@@ -7,15 +7,18 @@ function AsignarRepartidorModal({ isOpen, onClose, tienda, repartidores, onSucce
   const [serverError, setServerError] = useState('')
   const [actionUserId, setActionUserId] = useState(null)
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' })
+  const prevIsOpenRef = useRef(isOpen)
 
-  // Reset error when modal opens/closes
+  // Reset error when modal closes (using ref to detect transition)
   useEffect(() => {
-    if (!isOpen) {
+    // Only reset when transitioning from open to closed
+    if (prevIsOpenRef.current && !isOpen) {
       setIsLoading(false)
       setServerError('')
       setActionUserId(null)
       setToast({ show: false, message: '', type: 'success' })
     }
+    prevIsOpenRef.current = isOpen
   }, [isOpen])
 
   const handleAssign = async (userId) => {

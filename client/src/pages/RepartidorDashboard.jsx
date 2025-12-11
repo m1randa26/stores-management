@@ -5,10 +5,12 @@ import { storeService } from '../services/storeService'
 import { visitService } from '../services/visitService'
 import { orderService } from '../services/orderService'
 import { requestNotificationPermission, onMessageListener } from '../services/fcmService'
+import { cacheAssignedStores, getCachedStores, findStoreByQRCode } from '../services/offlineStoreService'
 import RegistrarVisitaModal from '../components/RegistrarVisitaModal'
 import CrearPedidoModal from '../components/CrearPedidoModal'
 import PhotoUploadModal from '../components/PhotoUploadModal'
 import PhotoGalleryModal from '../components/PhotoGalleryModal'
+import QRScannerModal from '../components/QRScannerModal'
 
 function RepartidorDashboard() {
   const [activeTab, setActiveTab] = useState('asignaciones')
@@ -97,9 +99,30 @@ function RepartidorDashboard() {
       )
 
       setTiendas(tiendasAsignadas)
+
+      // Cachear tiendas para modo offline (escaneo QR)
+      try {
+        await cacheAssignedStores(tiendasAsignadas)
+        console.log('✅ Tiendas cacheadas para modo offline')
+      } catch (cacheError) {
+        console.warn('⚠️ No se pudo cachear tiendas:', cacheError)
+      }
     } catch (error) {
-      setErrorTiendas(error.message)
       console.error('Error al cargar tiendas asignadas:', error)
+      
+      // Intentar cargar desde cache si falla la red
+      try {
+        const cachedStores = await getCachedStores()
+        if (cachedStores.length > 0) {
+          setTiendas(cachedStores)
+          setErrorTiendas('Modo offline - Mostrando datos guardados')
+          console.log('📦 Tiendas cargadas desde cache')
+        } else {
+          setErrorTiendas(error.message)
+        }
+      } catch {
+        setErrorTiendas(error.message)
+      }
     } finally {
       setIsLoadingTiendas(false)
     }
@@ -139,6 +162,7 @@ function RepartidorDashboard() {
       fetchVisitas()
       fetchOrdenes()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   const handleLogout = () => {
@@ -250,8 +274,10 @@ function RepartidorDashboard() {
 function AsignacionesTab({ tiendas, isLoading, error, onReload, onVisitRegistered, onOrderCreated }) {
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false)
   const [isPedidoModalOpen, setIsPedidoModalOpen] = useState(false)
+  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false)
   const [selectedTienda, setSelectedTienda] = useState(null)
   const [currentVisita, setCurrentVisita] = useState(null)
+  const [scanToast, setScanToast] = useState({ show: false, message: '', type: 'error' })
 
   const handleRegistrarVisita = (tienda) => {
     setSelectedTienda(tienda)
@@ -283,8 +309,72 @@ function AsignacionesTab({ tiendas, isLoading, error, onReload, onVisitRegistere
     }
   }
 
+  // Manejar escaneo de código QR
+  const handleQRScan = async (qrCode) => {
+    console.log('📷 QR escaneado:', qrCode)
+    
+    // Buscar en el array de tiendas actuales primero
+    let tienda = tiendas.find(t => t.qrCode === qrCode)
+    
+    // Si no está en el array actual, buscar en cache
+    if (!tienda) {
+      tienda = await findStoreByQRCode(qrCode)
+    }
+    
+    if (tienda) {
+      // Tienda encontrada - cerrar escáner y abrir modal de visita
+      setIsQRScannerOpen(false)
+      setSelectedTienda(tienda)
+      setIsVisitModalOpen(true)
+      
+      // Mostrar toast de éxito
+      setScanToast({
+        show: true,
+        message: `Tienda encontrada: ${tienda.name}`,
+        type: 'success'
+      })
+      setTimeout(() => setScanToast({ show: false, message: '', type: 'success' }), 3000)
+    } else {
+      // Tienda no asignada
+      setIsQRScannerOpen(false)
+      setScanToast({
+        show: true,
+        message: 'Esta tienda no está asignada a tu ruta',
+        type: 'error'
+      })
+      setTimeout(() => setScanToast({ show: false, message: '', type: 'error' }), 4000)
+    }
+  }
+
   return (
     <div>
+      {/* Modal de escáner QR */}
+      <QRScannerModal
+        isOpen={isQRScannerOpen}
+        onClose={() => setIsQRScannerOpen(false)}
+        onScan={handleQRScan}
+      />
+
+      {/* Toast de resultado de escaneo */}
+      {scanToast.show && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
+          scanToast.type === 'success' 
+            ? 'bg-green-600 text-white' 
+            : 'bg-red-600 text-white'
+        }`}>
+          {scanToast.type === 'success' ? (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          )}
+          {scanToast.message}
+        </div>
+      )}
+
       <RegistrarVisitaModal
         isOpen={isVisitModalOpen}
         onClose={() => setIsVisitModalOpen(false)}
@@ -306,26 +396,56 @@ function AsignacionesTab({ tiendas, isLoading, error, onReload, onVisitRegistere
 
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-900">Mis Tiendas Asignadas</h2>
-        <button
-          onClick={onReload}
-          className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="flex items-center gap-2">
+          {/* Botón de escanear QR */}
+          <button
+            onClick={() => setIsQRScannerOpen(true)}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+              />
+            </svg>
+            <span className="hidden sm:inline">Escanear QR</span>
+          </button>
+          
+          {/* Botón de actualizar */}
+          <button
+            onClick={onReload}
+            className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            <span className="hidden sm:inline">Actualizar</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Indicador de modo offline */}
+      {error && error.includes('offline') && (
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-2">
+          <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"
             />
           </svg>
-          Actualizar
-        </button>
-      </div>
+          <span className="text-sm text-yellow-700">
+            Modo offline - Mostrando tiendas guardadas
+          </span>
+        </div>
+      )}
 
       {/* Loading State */}
       {isLoading && (

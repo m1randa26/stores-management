@@ -746,6 +746,7 @@ function ProductosTab({ productos, isLoading, error, onReload }) {
     }, 500) // 500ms de delay
 
     return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery])
 
   const handleSearchChange = (e) => {
@@ -993,6 +994,7 @@ function VisitasTab({ visitas, isLoading, error, onReload }) {
     if (searchQuery.trim() === '') {
       onReload()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery])
 
   const filteredVisitas = visitas.filter((visita) => {

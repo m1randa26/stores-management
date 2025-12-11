@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import syncService from '../services/syncService'
 import offlineDB from '../services/offlineDB'
 import networkService from '../services/networkService'
@@ -9,8 +9,17 @@ function SyncStatus() {
   const [lastSyncResult, setLastSyncResult] = useState(null)
   const [showDetails, setShowDetails] = useState(false)
   const [isOnline, setIsOnline] = useState(networkService.getStatus())
+  const mountedRef = useRef(true)
+
+  const loadPendingCount = useCallback(async () => {
+    const counts = await offlineDB.getPendingCount()
+    if (mountedRef.current) {
+      setPendingCount(counts.total)
+    }
+  }, [])
 
   useEffect(() => {
+    mountedRef.current = true
     loadPendingCount()
 
     // Actualizar conteo cada 5 segundos
@@ -18,7 +27,9 @@ function SyncStatus() {
 
     // Suscribirse a cambios de red
     const unsubscribeNetwork = networkService.subscribe((online) => {
-      setIsOnline(online)
+      if (mountedRef.current) {
+        setIsOnline(online)
+      }
       if (online) {
         loadPendingCount()
       }
@@ -26,26 +37,26 @@ function SyncStatus() {
 
     // Suscribirse a resultados de sincronización
     const unsubscribeSync = syncService.subscribe((result) => {
-      setLastSyncResult(result)
+      if (mountedRef.current) {
+        setLastSyncResult(result)
+      }
       loadPendingCount()
 
       // Auto-ocultar después de 5 segundos
       setTimeout(() => {
-        setLastSyncResult(null)
+        if (mountedRef.current) {
+          setLastSyncResult(null)
+        }
       }, 5000)
     })
 
     return () => {
+      mountedRef.current = false
       clearInterval(interval)
       unsubscribeNetwork()
       unsubscribeSync()
     }
-  }, [])
-
-  async function loadPendingCount() {
-    const counts = await offlineDB.getPendingCount()
-    setPendingCount(counts.total)
-  }
+  }, [loadPendingCount])
 
   async function handleManualSync() {
     if (!isOnline) {
