@@ -767,25 +767,28 @@ function VisitasTab({ visitas, isLoading, error, onReload }) {
 
               {/* Photo Actions */}
               <div className="mt-4 pt-4 border-t border-gray-200 flex gap-2">
-                <button
-                  onClick={() => handleUploadPhotos(visita)}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                {/* Solo mostrar botón de subir si no hay fotos subidas todavía */}
+                {(!visita._count?.photos || visita._count.photos === 0) && (
+                  <button
+                    onClick={() => handleUploadPhotos(visita)}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  Subir Fotos
-                </button>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    Subir Fotos
+                  </button>
+                )}
                 <button
                   onClick={() => handleViewPhotos(visita)}
                   className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
