@@ -3,7 +3,9 @@ import { QRCodeCanvas } from 'qrcode.react'
 
 function QRModal({ isOpen, onClose, tienda }) {
   const qrRef = useRef(null)
-  const qrUrl = tienda ? `http://localhost:5173/stores/qr/${tienda.qrCode}` : ''
+  // Generar URL que apunta a la ruta de escaneo protegida
+  const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin
+  const qrUrl = tienda ? `${baseUrl}/stores/scan/${tienda.qrCode}` : ''
 
   const handleDownload = () => {
     if (qrRef.current) {

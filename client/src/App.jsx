@@ -4,6 +4,7 @@ import Login from './components/Login'
 import Dashboard from './pages/Dashboard'
 import RepartidorDashboard from './pages/RepartidorDashboard'
 import StoreQRView from './pages/StoreQRView'
+import StoreQRScanView from './pages/StoreQRScanView'
 import NetworkIndicator from './components/NetworkIndicator'
 import SyncStatus from './components/SyncStatus'
 import { tokenStorage } from './utils/tokenStorage'
@@ -75,7 +76,10 @@ function App() {
 
       <Routes>
         <Route path="/login" element={<Login />} />
+        {/* Ruta pública para ver info de tienda (sin autenticación) */}
         <Route path="/stores/qr/:qrCode" element={<StoreQRView />} />
+        {/* Ruta protegida para escanear y registrar visita (requiere autenticación) */}
+        <Route path="/stores/scan/:qrCode" element={<StoreQRScanView />} />
         <Route
           path="/dashboard"
           element={
