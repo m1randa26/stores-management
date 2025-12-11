@@ -197,6 +197,7 @@ export const photoService = {
         const formData = new FormData()
         formData.append('offlineId', photo.offlineId)
         formData.append('visitId', visitServerId)
+        formData.append('filename', photo.filename || file.name)
         formData.append('photo', file)
         if (photo.description) {
           formData.append('description', photo.description)
