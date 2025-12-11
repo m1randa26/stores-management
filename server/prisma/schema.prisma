@@ -1,0 +1,201 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String
+  role          Role      @default(REPARTIDOR)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relaciones
+  assignedStores  StoreAssignment[]
+  visits          Visit[]
+  orders          Order[]
+  photos          Photo[]
+  pushSubscriptions PushSubscription[]
+  fcmTokens       FcmToken[]
+  syncLogs        SyncLog[]
+}
+
+enum Role {
+  ADMIN
+  REPARTIDOR
+}
+
+model Store {
+  id            String    @id @default(cuid())
+  name          String
+  address       String
+  latitude      Float?
+  longitude     Float?
+  qrCode        String    @unique  // UUID para el QR
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relaciones
+  assignments   StoreAssignment[]
+  visits        Visit[]
+  orders        Order[]
+  photos        Photo[]
+}
+
+model StoreAssignment {
+  id            String    @id @default(cuid())
+  userId        String
+  storeId       String
+  assignedAt    DateTime  @default(now())
+  
+  user          User      @relation(fields: [userId], references: [id])
+  store         Store     @relation(fields: [storeId], references: [id])
+  
+  @@unique([userId, storeId])
+}
+
+model Visit {
+  id            String    @id @default(cuid())
+  userId        String
+  storeId       String
+  latitude      Float
+  longitude     Float
+  accuracy      Float?    // Precisión en metros
+  visitedAt     DateTime  @default(now())
+  syncedAt      DateTime?
+  offlineId     String?   @unique  // ID generado offline para evitar duplicados
+  
+  user          User      @relation(fields: [userId], references: [id])
+  store         Store     @relation(fields: [storeId], references: [id])
+  photos        Photo[]
+  order         Order?
+}
+
+model Photo {
+  id            String    @id @default(cuid())
+  visitId       String
+  storeId       String
+  userId        String
+  filename      String
+  filepath      String    // Ruta del archivo en el servidor
+  mimetype      String
+  size          Int       // Bytes
+  description   String?
+  uploadedAt    DateTime  @default(now())
+  offlineId     String?   @unique
+
+  visit         Visit     @relation(fields: [visitId], references: [id])
+  store         Store     @relation(fields: [storeId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
+
+  @@index([visitId])
+  @@index([storeId])
+  @@index([userId])
+}
+
+model Product {
+  id            String    @id @default(cuid())
+  sku           String    @unique
+  name          String
+  description   String?
+  price         Decimal   @db.Decimal(10, 2)
+  imageUrl      String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  orderItems    OrderItem[]
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  visitId       String      @unique
+  storeId       String
+  userId        String
+  status        OrderStatus @default(PENDING)
+  total         Decimal     @db.Decimal(10, 2)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  syncedAt      DateTime?
+  offlineId     String?     @unique
+  
+  visit         Visit       @relation(fields: [visitId], references: [id])
+  store         Store       @relation(fields: [storeId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
+  items         OrderItem[]
+}
+
+enum OrderStatus {
+  PENDING
+  SYNCED
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+model OrderItem {
+  id            String    @id @default(cuid())
+  orderId       String
+  productId     String
+  quantity      Int
+  unitPrice     Decimal   @db.Decimal(10, 2)
+  
+  order         Order     @relation(fields: [orderId], references: [id])
+  product       Product   @relation(fields: [productId], references: [id])
+}
+
+model SyncLog {
+  id            String    @id @default(cuid())
+  userId        String
+  entityType    String    // 'visit', 'order', 'photo'
+  entityId      String
+  action        String    // 'create', 'update', 'conflict'
+  status        String    // 'success', 'failed', 'conflict_resolved'
+  details       Json?
+  syncedAt      DateTime  @default(now())
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([entityType])
+  @@index([syncedAt])
+}
+
+model PushSubscription {
+  id            String    @id @default(cuid())
+  userId        String
+  endpoint      String    @unique
+  p256dh        String
+  auth          String
+  userAgent     String?
+  subscribedAt  DateTime  @default(now())
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model FcmToken {
+  id            String    @id @default(cuid())
+  userId        String
+  token         String    @unique
+  deviceInfo    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
