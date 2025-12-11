@@ -237,6 +237,15 @@ export const getMyVisits = async (
                     status: true
                 }
             },
+            photos: {
+                select: {
+                    id: true,
+                    filepath: true,
+                    filename: true,
+                    description: true,
+                    uploadedAt: true
+                }
+            },
             _count: {
                 select: {
                     photos: true
